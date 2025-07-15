@@ -1,14 +1,24 @@
 from fastapi import FastAPI
 from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI()
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
 @app.get("/")
 def read_root():
-
-    response = client.responses.create(
-    model="gpt-4.1",
-    input="Tell me a three sentence bedtime story about a unicorn."
+    response = client.chat.completions.create(
+        model="gpt-4o",  # 正しいモデル名を指定
+        messages=[
+            {
+                "role": "user",
+                "content": "ユニコーンについての3文の就寝前の物語を話してください."
+            }
+        ]
     )
+    return {"story": response.choices[0].message.content}
 
-    return response
