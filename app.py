@@ -25,8 +25,6 @@ def read_root():
         ]
     )
     return jsonify({"story": response.choices[0].message.content})
-
-# Vercel は app オブジェクトを自動検知する
-
-
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=8000)
 
