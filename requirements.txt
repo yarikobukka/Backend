@@ -1,3 +1,5 @@
 fastapi
-uvicorn
+asgiref
+werkzeug
 openai
+python-dotenv
