@@ -1,6 +1,3 @@
-fastapi
-asgiref
-werkzeug
+flask
 openai
 python-dotenv
-uvicorn

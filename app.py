@@ -1,28 +1,22 @@
-import asyncio
-from fastapi import FastAPI
-from asgiref.compatibility import guarantee_single_callable
-from asgiref.wsgi import WsgiMiddleware
-from werkzeug.wrappers import Request, Response
-
-# FastAPI アプリ作成
-app = FastAPI()
-
-@app.get("/")
-async def root():
-    return {"message": "Hello from FastAPI with self-made adapter"}
-
-# OpenAI クライアント利用例
+from flask import Flask, jsonify
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
+# .env 読み込み
 load_dotenv()
+
+# Flask アプリ作成
+app = Flask(__name__)
+
+# OpenAI クライアント
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-@app.get("/ai")
-async def ai_route():
+# ルートエンドポイント
+@app.route("/")
+def read_root():
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o",  # 正しいモデル名を指定
         messages=[
             {
                 "role": "user",
@@ -30,14 +24,9 @@ async def ai_route():
             }
         ]
     )
-    return {"story": response.choices[0].message.content}
+    return jsonify({"story": response.choices[0].message.content})
 
-# ASGI → WSGI 変換
-asgi_app = guarantee_single_callable(app)
-wsgi_app = WsgiMiddleware(asgi_app)
+# Vercel は app オブジェクトを自動検知する
 
-# Vercel が呼ぶ handler
-def handler(environ, start_response):
-    return wsgi_app(environ, start_response)
 
 
