@@ -3,3 +3,4 @@ asgiref
 werkzeug
 openai
 python-dotenv
+uvicorn
