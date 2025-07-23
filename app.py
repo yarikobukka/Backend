@@ -1,8 +1,7 @@
-from flask import Flask, Response
+from flask import Flask, render_template_string
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
-import json
 
 load_dotenv()
 
@@ -22,12 +21,15 @@ def index():
     )
     story = response.choices[0].message.content
 
-    # ensure_ascii=False で日本語をそのまま返す
-    return Response(
-        json.dumps({"story": story}, ensure_ascii=False),
-        content_type="application/json; charset=utf-8"
-    )
+    html = f"""
+    <html>
+    <head><meta charset="utf-8"><title>古明地さとり解説</title></head>
+    <body>
+        <h1>古明地さとりについて</h1>
+        <p>{story}</p>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
 
-if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8000)
 
