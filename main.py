@@ -63,3 +63,6 @@ async def get_similar_books(book: BookRequest):
         return JSONResponse(content=result_json)
     except json.JSONDecodeError:
         return JSONResponse(content={"error": "JSON parse failed", "raw": content}, status_code=500)
+@app.options("/api/books")
+async def options_books():
+    return JSONResponse(content={}, status_code=200)
