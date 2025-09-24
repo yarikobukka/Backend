@@ -33,13 +33,13 @@ class BookRequest(BaseModel):
 @app.post("/api/books")
 async def get_similar_books(book: BookRequest):
     prompt = f"""
-    次の本と類似する書籍を3冊リストアップしてください。
+    次の本と類似する書籍を3冊、以下のJSON形式で出力してください。説明や前置きは不要です。JSONのみを返してください。
 
     タイトル: {book.title}
     読み仮名: {book.reading}
     著者: {book.author}
 
-    以下のJSON形式で出力してください:
+    形式:
     {{
       "similar_books": [
         {{"title": "", "author": ""}},
@@ -58,11 +58,15 @@ async def get_similar_books(book: BookRequest):
     )
 
     content = response.choices[0].message.content
-    try:
-        result_json = json.loads(content)
-        return JSONResponse(content=result_json)
-    except json.JSONDecodeError:
-        return JSONResponse(content={"error": "JSON parse failed", "raw": content}, status_code=500)
+    import re
+    # JSON部分だけ抽出する例（簡易的）
+    match = re.search(r'\{.*\}', content, re.DOTALL)
+    if match:
+        try:
+            result_json = json.loads(match.group())
+            return JSONResponse(content=result_json)      
+        except json.JSONDecodeError:
+            return JSONResponse(content={"error": "JSON parse failed", "raw": content}, status_code=500)
 @app.options("/api/books")
 async def options_books():
     return JSONResponse(content={}, status_code=200)
