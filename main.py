@@ -58,6 +58,7 @@ async def get_similar_books(book: BookRequest):
     )
 
     content = response.choices[0].message.content
+    print("OpenAIの返答内容:\n", content)
     import re
     # JSON部分だけ抽出する例（簡易的）
     match = re.search(r'\{.*\}', content, re.DOTALL)
