@@ -35,11 +35,9 @@ async def get_similar_books(book: BookRequest):
     if not unique_books:
         return JSONResponse(content={"message": "類似書籍が見つかりませんでした"}, status_code=404)
 
-    # ステップ③：ChatGPTで紹介文を整形
-    formatted = format_with_chatgpt(unique_books)
+    # ステップ③：推薦文は不要なので省略
 
     return JSONResponse(content={
         "keywords": keywords,
-        "books": unique_books,
-        "recommendation": formatted
+        "books": unique_books
     })
