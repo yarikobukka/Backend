@@ -1,73 +1,46 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from openai import OpenAI
-from dotenv import load_dotenv
-import json
-import os
+from keyword_generator import generate_keywords
+from ndl_search import search_ndl_books
+from formatter import format_with_chatgpt
 
-# 環境変数読み込み
-load_dotenv()
-
-# FastAPIインスタンス作成
 app = FastAPI()
 
-# CORS設定（フロントからのアクセスを許可）
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 本番環境では特定のURLに制限
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# OpenAIクライアント設定
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# 受け取るリクエストの形式
 class BookRequest(BaseModel):
     title: str
-    reading: str
     author: str
 
 @app.post("/api/books")
 async def get_similar_books(book: BookRequest):
-    prompt = f"""
-    次の本と類似する書籍を3冊、以下のJSON形式で出力してください。説明や前置きは不要です。JSONのみを返してください。
+    # ステップ①：ChatGPTで検索キーワードを生成
+    keywords = generate_keywords(book.title, book.author)
+    if not keywords:
+        return JSONResponse(content={"error": "キーワード生成に失敗しました"}, status_code=500)
 
-    タイトル: {book.title}
-    読み仮名: {book.reading}
-    著者: {book.author}
+    # ステップ②：NDL APIで類似書籍を検索
+    ndl_books = []
+    for keyword in keywords:
+        results = search_ndl_books(keyword)
+        ndl_books.extend(results)
 
-    形式:
-    {{
-      "similar_books": [
-        {{"title": "", "author": ""}},
-        {{"title": "", "author": ""}},
-        {{"title": "", "author": ""}}
-      ]
-    }}
-    """
+    # 重複を除去（タイトル＋著者でユニーク化）
+    seen = set()
+    unique_books = []
+    for b in ndl_books:
+        key = (b["title"], b["author"])
+        if key not in seen:
+            seen.add(key)
+            unique_books.append(b)
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ]
-    )
+    if not unique_books:
+        return JSONResponse(content={"message": "類似書籍が見つかりませんでした"}, status_code=404)
 
-    content = response.choices[0].message.content
-    print("OpenAIの返答内容:\n", content)
-    import re
-    # JSON部分だけ抽出する例（簡易的）
-    match = re.search(r'\{.*\}', content, re.DOTALL)
-    if match:
-        try:
-            result_json = json.loads(match.group())
-            return JSONResponse(content=result_json)      
-        except json.JSONDecodeError:
-            return JSONResponse(content={"error": "JSON parse failed", "raw": content}, status_code=500)
-@app.options("/api/books")
-async def options_books():
-    return JSONResponse(content={}, status_code=200)
+    # ステップ③：ChatGPTで紹介文を整形
+    formatted = format_with_chatgpt(unique_books)
+
+    return JSONResponse(content={
+        "keywords": keywords,
+        "books": unique_books,
+        "recommendation": formatted
+    })
