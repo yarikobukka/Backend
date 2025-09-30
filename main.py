@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from keyword_generator import generate_keywords
 from ndl_search import search_ndl_books
-from formatter import format_with_chatgpt
 
 app = FastAPI()
 
