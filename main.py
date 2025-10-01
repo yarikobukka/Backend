@@ -27,7 +27,7 @@ async def get_similar_books(book: BookRequest):
     seen = set()
     unique_books = []
     for b in ndl_books:
-        key = (b["title"], b["author"])
+        key = (str(b["title"]), str(b["author"]))
         if key not in seen:
             seen.add(key)
             unique_books.append(b)
