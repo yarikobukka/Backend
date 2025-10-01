@@ -6,6 +6,16 @@ from ndl_search import search_ndl_books
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-vercel-app.vercel.app"],  # VercelのURLに変更
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class BookRequest(BaseModel):
     title: str
     author: str
