@@ -8,19 +8,26 @@ def search_ndl_books(keyword: str, count: int = 5):
         "cnt": count,
         "format": "xml"
     }
-    response = requests.get(url, params=params)
-    if response.status_code != 200:
+
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] NDL APIリクエスト失敗: {e}")
         return []
 
-    data = xmltodict.parse(response.text)
-    items = data['rss']['channel'].get('item', [])
-    if isinstance(items, dict):
-        items = [items]
-
-    return [
-        {
-            "title": item.get("title", "タイトル不明"),
-            "author": item.get("dc:creator", "著者不明")
-        }
-        for item in items
-    ]
+    try:
+        data = xmltodict.parse(response.text)
+        items = data.get('rss', {}).get('channel', {}).get('item', [])
+        if isinstance(items, dict):
+            items = [items]
+        return [
+            {
+                "title": item.get("title", "タイトル不明"),
+                "author": item.get("dc:creator", "著者不明")
+            }
+            for item in items
+        ]
+    except Exception as e:
+        print(f"[ERROR] XMLパース失敗: {e}")
+        return []
