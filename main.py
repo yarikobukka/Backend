@@ -10,7 +10,7 @@ app = FastAPI()
 # CORS設定（環境変数などで管理するのもおすすめ）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-vercel-app.vercel.app"],
+    allow_origins=["https://web-one-beta-11.vercel.app/api/index_list.php"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
