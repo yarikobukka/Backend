@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from keyword_generator import generate_keywords
+from generate_keywords import generate_keywords
 from ndl_search import search_ndl_books
 
 app = FastAPI()
