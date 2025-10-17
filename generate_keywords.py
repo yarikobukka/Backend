@@ -9,7 +9,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def generate_keywords(title: str, author: str) -> List[str]:
     prompt = f"""
-次の本に関連するテーマやジャンルを3つ、検索キーワードとして抽出してください。
+次の本に関連するテーマやジャンルを3つ、日本語の検索キーワードとして抽出してください。
 タイトル: {title}
 著者: {author}
 
@@ -26,10 +26,18 @@ def generate_keywords(title: str, author: str) -> List[str]:
             ]
         )
         content = response.choices[0].message.content.strip()
-        keywords = ast.literal_eval(content)
+        print("[DEBUG] OpenAI応答:", content)
+
+        try:
+            keywords = ast.literal_eval(content)
+        except Exception:
+            keywords = [k.strip() for k in content.split(",") if k.strip()]
+
         if isinstance(keywords, list) and all(isinstance(k, str) for k in keywords):
             return keywords
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"[ERROR] キーワード生成失敗: {e}")
 
     return []
