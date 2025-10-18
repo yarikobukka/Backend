@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from generate_keywords import generate_keywords
 from ndl_search import search_ndl_books
+import random
 
 app = FastAPI()
 
@@ -31,10 +32,10 @@ async def get_similar_books(book: BookRequest):
 
     keyword_books = {}
     for keyword in keywords:
-        results = search_ndl_books(keyword, count=1)
+        results = search_ndl_books(keyword, count=5)
         print(f"[INFO] キーワード '{keyword}' の検索結果:", results)
         if results:
-            book_info = results[0]
+            book_info = random.choice(results)
             key = (str(book_info["title"]).strip().lower(), str(book_info["author"]).strip().lower())
             if key not in keyword_books.values():
                 keyword_books[keyword] = book_info
