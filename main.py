@@ -64,14 +64,14 @@ async def get_similar_books(book: BookRequest):
             "message": "関連書籍が見つかりませんでした。"
         }, status_code=200)
 
+    # 🔥 キーワードと本のペアをそのまま返す
     return JSONResponse(content={
         "keywords": keywords,
-        "books": [
-            {
-                "keyword": keyword,
+        "books": {
+            keyword: {
                 "title": book["title"],
                 "author": book["author"]
             }
             for keyword, book in keyword_books.items()
-        ]
+        }
     }, status_code=200)
