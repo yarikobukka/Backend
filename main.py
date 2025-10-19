@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from generate_keywords import generate_keywords
-from ndl_search import search_ndl_books  # ← 上記の改善版を使用
+from ndl_search import search_ndl_books
 import random
 
 app = FastAPI()
@@ -39,20 +39,23 @@ async def get_similar_books(book: BookRequest):
 
     for keyword in keywords:
         try:
-            results = search_ndl_books(keyword, count=100)  # ← 件数を増やして選択肢を広げる
+            results = search_ndl_books(keyword, count=100)
             print(f"[INFO] キーワード '{keyword}' の検索結果:", results)
         except Exception as e:
             print(f"[ERROR] キーワード '{keyword}' の検索中にエラー:", e)
             continue
 
         if results:
-            random.shuffle(results)  # ← 結果をシャッフルして偏りを減らす
+            random.shuffle(results)
             for book_info in results:
-                key = (str(book_info.get("title", "")).strip().lower(), str(book_info.get("author", "")).strip().lower())
+                key = (
+                    str(book_info.get("title", "")).strip().lower(),
+                    str(book_info.get("author", "")).strip().lower()
+                )
                 if key not in seen_keys:
                     keyword_books[keyword] = book_info
                     seen_keys.add(key)
-                    break  # 1件だけ選ぶ
+                    break
 
     if not keyword_books:
         return JSONResponse(content={
@@ -63,5 +66,12 @@ async def get_similar_books(book: BookRequest):
 
     return JSONResponse(content={
         "keywords": keywords,
-        "books": list(keyword_books.values())
+        "books": [
+            {
+                "keyword": keyword,
+                "title": book["title"],
+                "author": book["author"]
+            }
+            for keyword, book in keyword_books.items()
+        ]
     }, status_code=200)

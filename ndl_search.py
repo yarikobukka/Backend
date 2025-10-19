@@ -4,7 +4,7 @@ import random
 
 def search_ndl_books(keyword: str, count: int = 100):
     url = "https://ndlsearch.ndl.go.jp/api/opensearch"
-    start_index = random.randint(0, 900)  # 最大1000件まで対応（API仕様）
+    start_index = random.randint(0, 900)
 
     params = {
         "title": keyword,

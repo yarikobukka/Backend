@@ -10,10 +10,11 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def generate_keywords(title: str, author: str) -> List[str]:
     prompt = f"""
 次の本に関連するテーマやジャンルを3つ、日本語の検索キーワードとして抽出してください。
+できるだけ異なる語頭の言葉を選び、ジャンルや内容に幅を持たせてください。
 タイトル: {title}
 著者: {author}
 
-形式:
+形式（JSON）:
 ["キーワード1", "キーワード2", "キーワード3"]
 """
 
@@ -35,6 +36,7 @@ def generate_keywords(title: str, author: str) -> List[str]:
 
         if isinstance(keywords, list) and all(isinstance(k, str) for k in keywords):
             return keywords
+
     except Exception as e:
         import traceback
         traceback.print_exc()
