@@ -8,59 +8,49 @@ import random
 
 app = FastAPI()
 
+# CORS設定：フロントエンドからのアクセスを許可
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://web-one-beta-11.vercel.app",
-        "http://127.0.0.1:5500",
-        "http://localhost:5500"
-    ],
+    allow_origins=["https://web-one-beta-11.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# リクエストボディの定義
 class BookRequest(BaseModel):
     title: str
     author: str
 
+# 書籍推薦APIエンドポイント
 @app.post("/api/books")
 async def get_similar_books(book: BookRequest):
     print(f"[INFO] 受信: タイトル='{book.title}', 著者='{book.author}'")
 
-    try:
-        keywords = generate_keywords(book.title, book.author)
-        print("[INFO] 生成されたキーワード:", keywords)
-    except Exception as e:
-        print("[ERROR] キーワード生成エラー:", e)
-        return JSONResponse(content={"error": "キーワード生成に失敗しました"}, status_code=500)
+    # キーワード生成（OpenAI）
+    keywords = generate_keywords(book.title, book.author)
+    print("[INFO] 生成されたキーワード:", keywords)
 
     if not keywords:
-        return JSONResponse(content={"error": "キーワードが生成されませんでした"}, status_code=500)
+        return JSONResponse(content={"error": "キーワード生成に失敗しました"}, status_code=500)
 
     keyword_books = {}
-    seen_keys = set()
 
     for keyword in keywords:
-        try:
-            results = search_ndl_books(keyword, count=100)
-            print(f"[INFO] キーワード '{keyword}' の検索結果:", results)
-        except Exception as e:
-            print(f"[ERROR] キーワード '{keyword}' の検索中にエラー:", e)
-            continue
+        # NDL検索：上位10件を取得
+        results = search_ndl_books(keyword, count=10)
+        print(f"[INFO] キーワード '{keyword}' の検索結果:", results)
 
         if results:
-            random.shuffle(results)
-            for book_info in results:
-                key = (
-                    str(book_info.get("title", "")).strip().lower(),
-                    str(book_info.get("author", "")).strip().lower()
-                )
-                if key not in seen_keys:
-                    keyword_books[keyword] = book_info
-                    seen_keys.add(key)
-                    break
+            # ランダムに1冊選択
+            book_info = random.choice(results)
 
+            # 重複チェック（タイトル＋著者の組み合わせ）
+            key = (str(book_info["title"]).strip().lower(), str(book_info["author"]).strip().lower())
+            if key not in [(str(b["title"]).strip().lower(), str(b["author"]).strip().lower()) for b in keyword_books.values()]:
+                keyword_books[keyword] = book_info
+
+    # 書籍が見つからなかった場合
     if not keyword_books:
         return JSONResponse(content={
             "keywords": keywords,
@@ -68,14 +58,8 @@ async def get_similar_books(book: BookRequest):
             "message": "関連書籍が見つかりませんでした。"
         }, status_code=200)
 
-    # 🔥 キーワードと本のペアをそのまま返す
+    # 書籍とキーワードを返す
     return JSONResponse(content={
         "keywords": keywords,
-        "books": {
-            keyword: {
-                "title": book["title"],
-                "author": book["author"]
-            }
-            for keyword, book in keyword_books.items()
-        }
-    }, status_code=200)
+        "books": keyword_books
+    })
