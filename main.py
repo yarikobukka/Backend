@@ -1,12 +1,21 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from pydantic import BaseModel
 from generate_keywords import generate_keywords
 from ndl_search import search_ndl_books
 import random
 
-app = FastAPI()
+app = FastAPI(
+    docs_url=None,
+
+    redoc_url=None,
+
+    openapi_url=None
+
+)
 
 # CORS設定：フロントエンドからのアクセスを許可
 app.add_middleware(
@@ -20,6 +29,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # リクエストボディの定義
 class BookRequest(BaseModel):
     title: str
@@ -61,8 +71,11 @@ async def get_similar_books(book: BookRequest):
             "message": "関連書籍が見つかりませんでした。"
         }, status_code=200)
 
-    # 書籍とキーワードを返す
+    # 書籍とキーワードを返す（正常系）
     return JSONResponse(content={
         "keywords": keywords,
-        "books": keyword_books
-    })
+        "books": list(keyword_books.values())  # ← リスト形式で返すとフロントで扱いやすい
+    }, status_code=200)
+
+# APIエンドポイント定義を全部書いたあとに
+app.mount("/", StaticFiles(directory="/home/akiko/Book", html=True), name="static")
