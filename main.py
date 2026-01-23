@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel
 from generate_keywords import generate_keywords
-from ndl_search import search_ndl_books
+from search_google_books import search_google_books
 import random
 
 app = FastAPI(
@@ -51,7 +51,7 @@ async def get_similar_books(book: BookRequest):
 
     for keyword in keywords:
         # NDL検索：上位10件を取得
-        results = search_ndl_books(keyword, count=10)
+        results = search_google_books(keyword, count=10)
         print(f"[INFO] キーワード '{keyword}' の検索結果:", results)
 
         if results:
