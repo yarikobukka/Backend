@@ -8,14 +8,7 @@ from generate_keywords import generate_keywords
 from search_google_books import search_google_books
 import random
 
-app = FastAPI(
-    docs_url=None,
-
-    redoc_url=None,
-
-    openapi_url=None
-
-)
+app = FastAPI()
 
 # CORS設定：フロントエンドからのアクセスを許可
 app.add_middleware(
