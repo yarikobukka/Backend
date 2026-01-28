@@ -51,3 +51,5 @@ def search_google_books(keyword: str, count: int = 10):
         })
 
     return books
+if __name__ == "__main__":
+    print("API_KEY:", API_KEY)
