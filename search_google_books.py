@@ -1,31 +1,47 @@
-import requests
+# search_google_books.py
 
+# 1〜2行目：dotenv と os を読み込む
+from dotenv import load_dotenv
+import os
+
+# 4行目：.env を読み込む
+load_dotenv()
+
+# 6行目：APIキーを環境変数から取得
+API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
+# 8行目以降：必要なライブラリ
+import requests
+import time
+
+# ここから関数本体
 def search_google_books(keyword: str, count: int = 10):
     url = "https://www.googleapis.com/books/v1/volumes"
 
     params = {
         "q": keyword,
-        "maxResults": count,
+        "maxResults": 40,
         "printType": "books",
-        "langRestrict": "ja"
+        "langRestrict": "ja",
+        "key": API_KEY   # ← ここで使われる
     }
+
+    time.sleep(1)  # 429回避
 
     try:
         response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Google Books API リクエスト失敗: {e}")
+    except Exception as e:
+        print("[ERROR] Google Books API リクエスト失敗:", e)
         return []
 
     data = response.json()
-
     if "items" not in data:
         return []
 
     books = []
     for item in data["items"]:
         info = item.get("volumeInfo", {})
-
         title = info.get("title", "タイトル不明")
         authors = info.get("authors", ["著者不明"])
 

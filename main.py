@@ -71,4 +71,4 @@ async def get_similar_books(book: BookRequest):
     }, status_code=200)
 
 # APIエンドポイント定義を全部書いたあとに
-app.mount("/", StaticFiles(directory="/home/akiko/Book", html=True), name="static")
+#app.mount("/", StaticFiles(directory="/home/akiko/Book", html=True), name="static")
