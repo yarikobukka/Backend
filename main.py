@@ -1,16 +1,17 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from generate_keywords import generate_keywords
-from search_google_books import search_google_books
-import random
+from openai import OpenAI
+from qdrant_client import QdrantClient
+from qdrant_client.models import ScoredPoint
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
-# CORS設定：フロントエンドからのアクセスを許可
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -23,52 +24,71 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# リクエストボディの定義
+# OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Qdrant（Python 3.11 なら FastEmbed 強制されない）
+qdrant = QdrantClient(
+    url=os.getenv("QDRANT_URL"),
+    api_key=os.getenv("QDRANT_API_KEY"),
+    prefer_grpc=False
+)
+
+COLLECTION = "books"
+
+# 埋め込み生成
+def embed(text: str):
+    resp = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return resp.data[0].embedding
+
+# リクエスト形式
 class BookRequest(BaseModel):
     title: str
-    author: str
+    author: str | None = None
 
-# 書籍推薦APIエンドポイント
+# 推薦API
 @app.post("/api/books")
-async def get_similar_books(book: BookRequest):
-    print(f"[INFO] 受信: タイトル='{book.title}', 著者='{book.author}'")
+async def recommend_books(req: BookRequest):
 
-    # キーワード生成（OpenAI）
-    keywords = generate_keywords(book.title, book.author)
-    print("[INFO] 生成されたキーワード:", keywords)
+    # ① タイトルをベクトル化
+    query_vec = embed(req.title)
 
-    if not keywords:
-        return JSONResponse(content={"error": "キーワード生成に失敗しました"}, status_code=500)
+    # ② タイトル類似検索（高速）
+    title_hits: list[ScoredPoint] = qdrant.search(
+        collection_name=COLLECTION,
+        query_vector=("title_vector", query_vec),
+        limit=50
+    )
 
-    keyword_books = {}
+    if not title_hits:
+        return JSONResponse({"books": []})
 
-    for keyword in keywords:
-        # NDL検索：上位10件を取得
-        results = search_google_books(keyword, count=10)
-        print(f"[INFO] キーワード '{keyword}' の検索結果:", results)
+    # ③ summary ベクトルで再ランキング
+    re_ranked = []
+    for hit in title_hits:
+        summary = hit.payload.get("summary", "")
+        summary_vec = embed(summary)
 
-        if results:
-            # ランダムに1冊選択
-            book_info = random.choice(results)
+        result = qdrant.search(
+            collection_name=COLLECTION,
+            query_vector=("summary_vector", summary_vec),
+            limit=1
+        )
 
-            # 重複チェック（タイトル＋著者の組み合わせ）
-            key = (str(book_info["title"]).strip().lower(), str(book_info["author"]).strip().lower())
-            if key not in [(str(b["title"]).strip().lower(), str(b["author"]).strip().lower()) for b in keyword_books.values()]:
-                keyword_books[keyword] = book_info
+        if result:
+            re_ranked.append(result[0])
 
-    # 書籍が見つからなかった場合
-    if not keyword_books:
-        return JSONResponse(content={
-            "keywords": keywords,
-            "books": [],
-            "message": "関連書籍が見つかりませんでした。"
-        }, status_code=200)
+    # ④ 重複排除
+    seen = set()
+    unique_books = []
+    for hit in re_ranked:
+        isbn = hit.payload.get("isbn")
+        if isbn not in seen:
+            seen.add(isbn)
+            unique_books.append(hit.payload)
 
-    # 書籍とキーワードを返す（正常系）
-    return JSONResponse(content={
-        "keywords": keywords,
-        "books": list(keyword_books.values())  # ← リスト形式で返すとフロントで扱いやすい
-    }, status_code=200)
-
-# APIエンドポイント定義を全部書いたあとに
-#app.mount("/", StaticFiles(directory="/home/akiko/Book", html=True), name="static")
+    # ⑤ 上位10件返す
+    return JSONResponse({"books": unique_books[:10]})

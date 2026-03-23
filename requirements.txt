@@ -1,6 +1,6 @@
 fastapi
-uvicorn
-openai
+uvicorn[standard]
+qdrant-client
 python-dotenv
-requests
-xmltodict
+openai
+numpy
