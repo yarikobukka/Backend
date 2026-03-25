@@ -68,7 +68,7 @@ async def recommend_books(req: BookRequest):
         return JSONResponse(
             status_code=404,
             content={
-                "message":"入力された本がデータベースにありませんでした。"
+                "message":"入力された本がデータベースにありませんでした。",
                 "books":[]
             }
 
