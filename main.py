@@ -27,7 +27,7 @@ app.add_middleware(
 # OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Qdrant（Python 3.11 なら FastEmbed 強制されない）
+# Qdrant
 qdrant = QdrantClient(
     url=os.getenv("QDRANT_URL"),
     api_key=os.getenv("QDRANT_API_KEY"),
@@ -56,15 +56,17 @@ async def recommend_books(req: BookRequest):
     # ① タイトルをベクトル化
     query_vec = embed(req.title)
 
-    # ② タイトル類似検索（高速）
+    # ② タイトル類似検索
     title_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
         query_vector=("title_vector", query_vec),
         limit=50
     )
 
-    if not title_hits:
-        return JSONResponse({"books": []})
+    # --- A仕様：類似度が低い＝DBに存在しない ---
+    if not title_hits or title_hits[0].score < 0.50:
+        return {"books": []}
+    # ---------------------------------------------
 
     # ③ summary ベクトルで再ランキング
     re_ranked = []
