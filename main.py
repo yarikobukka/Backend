@@ -65,7 +65,14 @@ async def recommend_books(req: BookRequest):
 
     # --- A仕様：類似度が低い＝DBに存在しない ---
     if not title_hits or title_hits[0].score < 0.50:
-        return {"books": []}
+        return JSONResponse(
+            status_code=404,
+            content={
+                "message":"入力された本がデータベースにありませんでした。"
+                "books":[]
+            }
+
+        )
     # ---------------------------------------------
 
     # ③ summary ベクトルで再ランキング
