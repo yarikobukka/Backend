@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from openai import OpenAI
 from qdrant_client import QdrantClient
@@ -19,7 +18,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5500",
         "http://127.0.0.1:5500",
-        "https://web-one-beta-11.vercel.app"
+        "https://web-one-beta-11.vercel.app",
+        "https://yariko-biblioradar.com"  # ← 追加しておくと安全
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -111,12 +111,3 @@ async def recommend_books(req: BookRequest):
 
     # ⑦ 上位10件返す
     return JSONResponse({"books": unique_books[:10]})
-
-
-# -------------------------
-# 🌐 フロントエンド配信
-# -------------------------
-# ここをあなたのフロントのパスに合わせてね
-FRONT_DIR = "/home/akiko/Book"
-
-app.mount("/", StaticFiles(directory=FRONT_DIR, html=True), name="static")
