@@ -12,16 +12,10 @@ load_dotenv()
 
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "https://web-one-beta-11.vercel.app",
-        "https://yariko-biblioradar.com",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -38,7 +32,6 @@ qdrant = QdrantClient(
 
 COLLECTION = "books"
 
-
 # 埋め込み生成
 def embed(text: str):
     resp = client.embeddings.create(
@@ -53,6 +46,13 @@ class BookRequest(BaseModel):
     author: str | None = None
 
 
+# ★ 追加：GET /api/books（動作確認・CORS確認用）
+@app.get("/api/books")
+async def get_books():
+    return {"status": "ok"}
+
+
+# ★ 既存の POST はそのまま
 @app.post("/api/books")
 async def recommend_books(req: BookRequest):
     # ① タイトルをベクトル化
@@ -116,10 +116,10 @@ async def recommend_books(req: BookRequest):
             seen.add(isbn)
             recommended.append(payload)
 
-    # ⑦ 上位10件返す（必要ならスコアでフィルタも可）
+    # ⑦ 上位10件返す
     return JSONResponse(
         {
-            "identified_book": identified_book,  # 特定した元の本（必要なければ削除してOK）
+            "identified_book": identified_book,
             "books": recommended[:10],
         }
     )
