@@ -46,22 +46,22 @@ class BookRequest(BaseModel):
     author: str | None = None
 
 
-# ★ 追加：GET /api/books（動作確認・CORS確認用）
+# ★ GET /api/books（動作確認用）
 @app.get("/api/books")
 async def get_books():
     return {"status": "ok"}
 
 
-# ★ 既存の POST はそのまま
+# ★ POST /api/books（推薦API）
 @app.post("/api/books")
 async def recommend_books(req: BookRequest):
     # ① タイトルをベクトル化
     title_vec = embed(req.title)
 
-    # ② タイトル類似検索（入力された本を特定するため）
+    # ② タイトル類似検索（named vectors 対応）
     title_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
-        query_vector=("title_vector", title_vec),
+        query_vector={"title_vector": title_vec},
         limit=5,
     )
 
@@ -75,7 +75,7 @@ async def recommend_books(req: BookRequest):
             },
         )
 
-    # ③ もっとも類似度の高い1冊を「入力された本」とみなす
+    # ③ 最も類似度の高い1冊を「入力された本」とみなす
     identified_book = title_hits[0].payload
 
     # summary がない本だった場合は推薦できない
@@ -89,13 +89,13 @@ async def recommend_books(req: BookRequest):
             },
         )
 
-    # ④ その本の summary をベクトル化
+    # ④ summary をベクトル化
     summary_vec = embed(summary)
 
-    # ⑤ summary_vector を使って類似書籍検索
+    # ⑤ summary_vector を使って類似書籍検索（named vectors）
     similar_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
-        query_vector=("summary_vector", summary_vec),
+        query_vector={"summary_vector": summary_vec},
         limit=50,
     )
 
