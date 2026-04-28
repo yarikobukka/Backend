@@ -12,10 +12,14 @@ load_dotenv()
 
 app = FastAPI()
 
+# --- CORS 設定（本番用） ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=[
+        "https://yariko-biblioradar.com",
+        "https://api.yariko-biblioradar.com",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
