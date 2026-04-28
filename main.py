@@ -27,11 +27,10 @@ app.add_middleware(
 # OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Qdrant
+# Qdrant（HTTP モード）
 qdrant = QdrantClient(
     url=os.getenv("QDRANT_URL"),
     api_key=os.getenv("QDRANT_API_KEY"),
-    prefer_grpc=False,
 )
 
 COLLECTION = "books"
@@ -62,10 +61,10 @@ async def recommend_books(req: BookRequest):
     # ① タイトルをベクトル化
     title_vec = embed(req.title)
 
-    # ② タイトル類似検索（named vectors 対応）
+    # ② タイトル類似検索（最新版 API）
     title_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
-        query_vector={"title_vector": title_vec},
+        query_vector=("title_vector", title_vec),
         limit=5,
     )
 
@@ -96,10 +95,10 @@ async def recommend_books(req: BookRequest):
     # ④ summary をベクトル化
     summary_vec = embed(summary)
 
-    # ⑤ summary_vector を使って類似書籍検索（named vectors）
+    # ⑤ summary_vector を使って類似書籍検索（最新版 API）
     similar_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
-        query_vector={"summary_vector": summary_vec},
+        query_vector=("summary_vector", summary_vec),
         limit=50,
     )
 
