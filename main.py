@@ -12,7 +12,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# --- CORS 設定（本番用） ---
+# --- CORS 設定 ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -62,9 +62,10 @@ async def recommend_books(req: BookRequest):
     title_vec = embed(req.title)
 
     # ② タイトル類似検索（最新版 API）
+    #    ※ 最新版では query_vector=("field", vec) は廃止
     title_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
-        query_vector=("title_vector", title_vec),
+        query=title_vec,
         limit=5,
     )
 
@@ -98,7 +99,7 @@ async def recommend_books(req: BookRequest):
     # ⑤ summary_vector を使って類似書籍検索（最新版 API）
     similar_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
-        query_vector=("summary_vector", summary_vec),
+        query=summary_vec,
         limit=50,
     )
 
