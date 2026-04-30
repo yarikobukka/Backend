@@ -12,7 +12,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# --- CORS 設定 ---
+# --- CORS 設定（Cloudflare 経由で確実に動く形） ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -50,7 +50,8 @@ class BookRequest(BaseModel):
 
 
 # ★ GET /api/books（動作確認用）
-@app.get("/api/books")
+#   → head=True を追加して HEAD リクエストにも CORS を返す
+@app.get("/api/books", head=True)
 async def get_books():
     return {"status": "ok"}
 
@@ -61,15 +62,13 @@ async def recommend_books(req: BookRequest):
     # ① タイトルをベクトル化
     title_vec = embed(req.title)
 
-    # ② タイトル類似検索（最新版 API）
-    #    ※ 最新版では query_vector=("field", vec) は廃止
+    # ② タイトル類似検索
     title_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
         query=title_vec,
         limit=5,
     )
 
-    # 類似度が低い → DBに存在しないとみなす
     if not title_hits or title_hits[0].score < 0.35:
         return JSONResponse(
             status_code=404,
@@ -79,10 +78,8 @@ async def recommend_books(req: BookRequest):
             },
         )
 
-    # ③ 最も類似度の高い1冊を「入力された本」とみなす
     identified_book = title_hits[0].payload
 
-    # summary がない本だった場合は推薦できない
     summary = identified_book.get("summary")
     if not summary:
         return JSONResponse(
@@ -96,7 +93,7 @@ async def recommend_books(req: BookRequest):
     # ④ summary をベクトル化
     summary_vec = embed(summary)
 
-    # ⑤ summary_vector を使って類似書籍検索（最新版 API）
+    # ⑤ 類似書籍検索
     similar_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
         query=summary_vec,
@@ -112,7 +109,6 @@ async def recommend_books(req: BookRequest):
         payload = hit.payload
         isbn = payload.get("isbn")
 
-        # 自分自身は除外
         if isbn == self_isbn:
             continue
 
