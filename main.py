@@ -12,7 +12,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# --- CORS 設定（Cloudflare 経由で確実に動く形） ---
+# --- CORS 設定 ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -27,7 +27,7 @@ app.add_middleware(
 # OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Qdrant（HTTP モード）
+# Qdrant
 qdrant = QdrantClient(
     url=os.getenv("QDRANT_URL"),
     api_key=os.getenv("QDRANT_API_KEY"),
@@ -35,7 +35,6 @@ qdrant = QdrantClient(
 
 COLLECTION = "books"
 
-# 埋め込み生成
 def embed(text: str):
     resp = client.embeddings.create(
         model="text-embedding-3-small",
@@ -50,19 +49,21 @@ class BookRequest(BaseModel):
 
 
 # ★ GET /api/books（動作確認用）
-#   → head=True を追加して HEAD リクエストにも CORS を返す
-@app.get("/api/books", head=True)
+@app.get("/api/books")
 async def get_books():
     return {"status": "ok"}
+
+# ★ HEAD /api/books（Cloudflare が使う）
+@app.head("/api/books")
+async def head_books():
+    return {}
 
 
 # ★ POST /api/books（推薦API）
 @app.post("/api/books")
 async def recommend_books(req: BookRequest):
-    # ① タイトルをベクトル化
     title_vec = embed(req.title)
 
-    # ② タイトル類似検索
     title_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
         query=title_vec,
@@ -90,17 +91,14 @@ async def recommend_books(req: BookRequest):
             },
         )
 
-    # ④ summary をベクトル化
     summary_vec = embed(summary)
 
-    # ⑤ 類似書籍検索
     similar_hits: list[ScoredPoint] = qdrant.search(
         collection_name=COLLECTION,
         query=summary_vec,
         limit=50,
     )
 
-    # ⑥ 重複排除（ISBN）＋ 自分自身は除外
     seen = set()
     recommended = []
     self_isbn = identified_book.get("isbn")
@@ -116,7 +114,6 @@ async def recommend_books(req: BookRequest):
             seen.add(isbn)
             recommended.append(payload)
 
-    # ⑦ 上位10件返す
     return JSONResponse(
         {
             "identified_book": identified_book,
